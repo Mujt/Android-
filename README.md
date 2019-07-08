@@ -1,2 +1,2 @@
-# Android-
-Android开发暑期实训课程大作业
+# Chapter-8
+多媒体进阶-拍照录制
