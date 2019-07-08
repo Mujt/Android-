@@ -71,9 +71,15 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onClick(View view) {
                         /*跳转播放*/
+                        Intent intent = new Intent(MainActivity.this,VideoPlayer.class);
+                        String videourl = mFeeds.get(position).getVideoUrl();
+                        Bundle mBundle = new Bundle();
+                        mBundle.putSerializable("data", videourl);
+                        intent.putExtras(mBundle);
+                        startActivity(intent);
                     }
                 });
-                String url = mFeeds.get(position).getUrl();
+                String url = mFeeds.get(position).getImgUrl();
 
                 Glide.with((iv.getContext())).load(url).into(iv);
             }

@@ -2,9 +2,13 @@ package com.bytedance.camera.demo;
 
 import android.Manifest;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.service.autofill.CustomDescription;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -18,6 +22,7 @@ import android.widget.VideoView;
 import com.bytedance.camera.demo.bean.PostVideoResponse;
 import com.bytedance.camera.demo.network.VideoService;
 import com.bytedance.camera.demo.utils.ResourceUtils;
+import com.bytedance.camera.demo.utils.Utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +39,7 @@ public class PostVideo extends AppCompatActivity {
 
     private static final int PICK_IMAGE = 1;
     private static final int PICK_VIDEO = 2;
+    private static final int RECORD = 3;
     private static final String TAG = "PostVideoActivity";
     private Button mBtn;
     private ImageView img;
@@ -41,6 +47,12 @@ public class PostVideo extends AppCompatActivity {
 
     public Uri mSelectedImage;
     private Uri mSelectedVideo;
+    private Uri recordVideo;
+
+    private Button record;
+
+    private File imgFile;
+    private File videoFile;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -49,6 +61,34 @@ public class PostVideo extends AppCompatActivity {
         img = findViewById(R.id.choose_img);
         video = findViewById(R.id.choose_video);
         mBtn = findViewById(R.id.choose);
+        record = findViewById(R.id.record);
+        img.setVisibility(View.INVISIBLE);
+        video.setVisibility(View.INVISIBLE);
+
+        record.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (getString(R.string.record).equals(record.getText())) {
+                    Intent intent = new Intent(PostVideo.this, CustomCameraActivity.class);
+                    startActivityForResult(intent, RECORD);
+                    record.setText("POST IT");
+                } else {
+                    //record.setEnabled(true);
+                    try {
+                        postVideo(2);
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    //record.setText(getString(R.string.record));
+                    //record.setEnabled(false);
+                }
+            }
+        });
+
+
+
         mBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -56,15 +96,14 @@ public class PostVideo extends AppCompatActivity {
                 if (getString(R.string.select_an_image).equals(s)) {
                     chooseImage();
                     /*Todo:设置img*/
-                    img.setImageURI(mSelectedImage);
+
                 } else if (getString(R.string.select_a_video).equals(s)) {
                     chooseVideo();
                     /*Todo:设置video*/
-                    video.setVideoURI(mSelectedVideo);
-                    video.start();
+
                 } else if (getString(R.string.post_it).equals(s)) {
                     try {
-                        postVideo();
+                        postVideo(1);
                     } catch (ExecutionException e) {
                         e.printStackTrace();
                     } catch (InterruptedException e) {
@@ -75,6 +114,29 @@ public class PostVideo extends AppCompatActivity {
         });
     }
 
+    private void setPic() {
+        //todo 根据imageView裁剪
+        //todo 根据缩放比例读取文件，生成Bitmap
+
+        //todo 如果存在预览方向改变，进行图片旋转
+
+        //todo 如果存在预览方向改变，进行图片旋转
+
+        int targetW = img.getWidth();
+        int targetH = img.getHeight();
+
+        BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+        bmOptions.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(imgFile.getAbsolutePath(),bmOptions);
+        int photoW = bmOptions.outWidth;
+        int photoH = bmOptions.outHeight;
+        int scaleFactor = Math.min(photoW/targetW,photoH/targetH);
+        bmOptions.inJustDecodeBounds = false;
+        bmOptions.inSampleSize = scaleFactor;
+        bmOptions.inPurgeable = true;
+        Bitmap bmp = BitmapFactory.decodeFile(imgFile.getAbsolutePath(),bmOptions);
+        img.setImageBitmap(bmp);
+    }
 
     public void chooseImage() {
         // TODO-C2 (4) Start Activity to select an image
@@ -105,10 +167,31 @@ public class PostVideo extends AppCompatActivity {
                 mSelectedImage = data.getData();
                 Log.d(TAG, "selectedImage = " + mSelectedImage);
                 mBtn.setText(R.string.select_a_video);
+                img.setVisibility(View.VISIBLE);
+                //video.setVisibility(View.INVISIBLE);
+                imgFile = new File(ResourceUtils.getRealPath(PostVideo.this, mSelectedImage));
+                setPic();
             } else if (requestCode == PICK_VIDEO) {
                 mSelectedVideo = data.getData();
                 Log.d(TAG, "mSelectedVideo = " + mSelectedVideo);
                 mBtn.setText(R.string.post_it);
+                //img.setVisibility(View.INVISIBLE);
+                video.setVisibility(View.VISIBLE);
+                video.setVideoURI(mSelectedVideo);
+                video.start();
+            } else if (requestCode == RECORD) {
+                recordVideo = Uri.parse(data.getStringExtra("data"));
+                video.setVisibility(View.VISIBLE);
+                video.setVideoURI(recordVideo);
+                video.start();
+                MediaMetadataRetriever rev = new MediaMetadataRetriever();
+                rev.setDataSource(this,recordVideo);
+                Bitmap bitmap = rev.getFrameAtTime(0);
+                img.setVisibility(View.VISIBLE);
+                img.setImageBitmap(bitmap);
+                File file = Utils.getOutputMediaFile(Utils.MEDIA_TYPE_IMAGE);
+                mSelectedVideo = recordVideo;
+                //mSelectedImage =
             }
         }
     }
@@ -120,9 +203,14 @@ public class PostVideo extends AppCompatActivity {
         return MultipartBody.Part.createFormData(name, f.getName(), requestFile);
     }
 
-    private void postVideo() throws ExecutionException, InterruptedException {
-        mBtn.setText("POSTING...");
-        mBtn.setEnabled(false);
+    private void postVideo(int i) throws ExecutionException, InterruptedException {
+        if (i == 1) {
+            mBtn.setText("POSTING...");
+            mBtn.setEnabled(false);
+        } else {
+            record.setText("POSTING...");
+            record.setEnabled(false);
+        }
 
         ActivityCompat.requestPermissions(PostVideo.this,
                 new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -136,8 +224,15 @@ public class PostVideo extends AppCompatActivity {
         } else {
             Toast.makeText(this,"Post failedï¼",Toast.LENGTH_LONG).show();
         }
-        mBtn.setText(R.string.select_an_image);
-        mBtn.setEnabled(true);
+        if (i == 1) {
+            mBtn.setText(R.string.select_an_image);
+            mBtn.setEnabled(true);
+        } else {
+            record.setText(getString(R.string.record));
+            record.setEnabled(true);
+        }
+        img.setVisibility(View.INVISIBLE);
+        video.setVisibility(View.INVISIBLE);
         // TODO-C2 (6) Send Request to post a video with its cover image
         // if success, make a text Toast and show
     }

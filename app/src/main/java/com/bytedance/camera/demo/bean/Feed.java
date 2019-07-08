@@ -16,6 +16,8 @@ public class Feed {
     @SerializedName("video_url")
     private String video_url;
 
-    public String getUrl() { return image_url; }
+
+    public String getImgUrl() { return image_url; }
+    public String getVideoUrl() { return video_url; }
     // TODO-C2 (1) Implement your Feed Bean here according to the response json
 }

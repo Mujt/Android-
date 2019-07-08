@@ -1,8 +1,10 @@
 package com.bytedance.camera.demo;
 
+import android.content.Intent;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -14,10 +16,13 @@ import android.view.Window;
 import android.view.WindowManager;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
+
+import okhttp3.internal.Util;
 
 import static com.bytedance.camera.demo.utils.Utils.MEDIA_TYPE_IMAGE;
 import static com.bytedance.camera.demo.utils.Utils.MEDIA_TYPE_VIDEO;
@@ -33,6 +38,11 @@ public class CustomCameraActivity extends AppCompatActivity {
     private boolean isRecording = false;
 
     private int rotationDegree = 0;
+
+    private String outpath;
+    /*private Uri img;
+
+    private Uri video;*/
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,6 +94,7 @@ public class CustomCameraActivity extends AppCompatActivity {
         findViewById(R.id.btn_picture).setOnClickListener(v -> {
             //todo 拍一张照片
             mCamera.takePicture(null,null,mPicture);
+
         });
 
         findViewById(R.id.btn_record).setOnClickListener(v -> {
@@ -92,9 +103,14 @@ public class CustomCameraActivity extends AppCompatActivity {
                 //todo 停止录制
                 releaseMediaRecorder();
                 isRecording = false;
+                Intent intent = new Intent();
+                intent.putExtra("data",outpath);
+                setResult(RESULT_OK,intent);
+                finish();
             } else {
                 //todo 录制
                 prepareVideoRecorder();
+
                 isRecording = true;
             }
         });
@@ -205,9 +221,12 @@ public class CustomCameraActivity extends AppCompatActivity {
         mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
         mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
         mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
-        mMediaRecorder.setOutputFile(getOutputMediaFile(MEDIA_TYPE_VIDEO).toString());
+        outpath = getOutputMediaFile(MEDIA_TYPE_VIDEO).toString();
+        mMediaRecorder.setOutputFile(outpath);
+        //video = Uri.parse(outpath);
         mMediaRecorder.setPreviewDisplay(mSurfaceView.getHolder().getSurface());
         mMediaRecorder.setOrientationHint(rotationDegree);
+
         try {
             mMediaRecorder.prepare();
             mMediaRecorder.start();
@@ -218,6 +237,7 @@ public class CustomCameraActivity extends AppCompatActivity {
         }
         return true;
     }
+
 
 
     private void releaseMediaRecorder() {
