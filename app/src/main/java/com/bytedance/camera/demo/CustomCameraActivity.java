@@ -9,6 +9,7 @@ import android.media.MediaMetadataRetriever;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
@@ -19,6 +20,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.RelativeLayout;
 
 import java.io.File;
 import java.io.FileDescriptor;
@@ -68,6 +70,11 @@ public class CustomCameraActivity extends AppCompatActivity {
         mCamera.setDisplayOrientation(rotationDegree);
 
         mSurfaceView = findViewById(R.id.img);
+        RelativeLayout.LayoutParams svParams = (RelativeLayout.LayoutParams) mSurfaceView.getLayoutParams();
+        svParams.height = mCamera.getParameters().getPreviewSize().width;
+        svParams.width = mCamera.getParameters().getPreviewSize().height;
+        mSurfaceView.setLayoutParams(svParams);
+
         mSurfaceView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -125,6 +132,17 @@ public class CustomCameraActivity extends AppCompatActivity {
                 isRecording = true;
             }
         });
+        findViewById(R.id.btn_delay).setOnClickListener(v -> {
+            prepareVideoRecorder();
+            isRecording = true;
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    releaseMediaRecorder();
+                    isRecording = false;
+                }
+            }, 15 * 1000);
+        });
 
         findViewById(R.id.btn_facing).setOnClickListener(v -> {
             //todo 切换前后摄像头
@@ -146,11 +164,19 @@ public class CustomCameraActivity extends AppCompatActivity {
 
         });
 
-        findViewById(R.id.btn_zoom).setOnClickListener(v -> {
+        findViewById(R.id.btn_zoom_up).setOnClickListener(v -> {
             //todo 调焦，需要判断手机是否支持
             Camera.Parameters params = mCamera.getParameters();
             int zoomValue = params.getZoom();
             zoomValue += 1;
+            params.setZoom(zoomValue);
+            mCamera.setParameters(params);
+        });
+        findViewById(R.id.btn_zoom_down).setOnClickListener(v ->{
+            Camera.Parameters params = mCamera.getParameters();
+            int zoomValue = params.getZoom();
+            if(zoomValue!=0)
+                zoomValue -= 1;
             params.setZoom(zoomValue);
             mCamera.setParameters(params);
         });

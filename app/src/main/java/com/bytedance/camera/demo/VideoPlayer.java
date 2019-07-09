@@ -29,8 +29,10 @@ public class VideoPlayer extends AppCompatActivity {
         setTitle("Play");
 
         seekBar=findViewById(R.id.seekBar);
-        button = findViewById(R.id.btn_play);
-        button.setOnClickListener(new View.OnClickListener() {
+
+        videoView = findViewById(R.id.videoView);
+
+        videoView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if(videoView.isPlaying()){
@@ -41,7 +43,6 @@ public class VideoPlayer extends AppCompatActivity {
                 }
             }
         });
-        videoView = findViewById(R.id.videoView);
         //videoView.setVideoPath(getVideoPath(R.raw.yuminhong));
         /*Todo:添加video的uri*/
         Intent intent = getIntent();
