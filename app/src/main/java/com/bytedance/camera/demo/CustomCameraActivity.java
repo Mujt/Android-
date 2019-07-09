@@ -1,11 +1,16 @@
 package com.bytedance.camera.demo;
 
+import android.Manifest;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Surface;
@@ -40,6 +45,7 @@ public class CustomCameraActivity extends AppCompatActivity {
     private int rotationDegree = 0;
 
     private String outpath;
+    private String cover_img;
     /*private Uri img;
 
     private Uri video;*/
@@ -51,6 +57,11 @@ public class CustomCameraActivity extends AppCompatActivity {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_custom_camera);
+
+        ActivityCompat.requestPermissions(CustomCameraActivity.this,
+                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        Manifest.permission.READ_EXTERNAL_STORAGE},
+                1);
 
         mCamera = getCamera(Camera.CameraInfo.CAMERA_FACING_BACK);
         rotationDegree =getCameraDisplayOrientation(CAMERA_TYPE);
@@ -94,7 +105,6 @@ public class CustomCameraActivity extends AppCompatActivity {
         findViewById(R.id.btn_picture).setOnClickListener(v -> {
             //todo 拍一张照片
             mCamera.takePicture(null,null,mPicture);
-
         });
 
         findViewById(R.id.btn_record).setOnClickListener(v -> {
@@ -104,7 +114,8 @@ public class CustomCameraActivity extends AppCompatActivity {
                 releaseMediaRecorder();
                 isRecording = false;
                 Intent intent = new Intent();
-                intent.putExtra("data",outpath);
+                intent.putExtra("data1",outpath);
+                intent.putExtra("data2",cover_img);
                 setResult(RESULT_OK,intent);
                 finish();
             } else {
@@ -258,11 +269,13 @@ public class CustomCameraActivity extends AppCompatActivity {
         try {
             FileOutputStream fos = new FileOutputStream(pictureFile);
             fos.write(data);
+
             fos.close();
         } catch (IOException e) {
             Log.d("mPicture", "Error accessing file: " + e.getMessage());
         }
-
+        //cover_img = FileProvider.getUriForFile(this,"com.bytedance.camera.demo",pictureFile);
+        cover_img = pictureFile.toString();
         mCamera.startPreview();
     };
 

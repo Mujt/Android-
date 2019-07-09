@@ -8,6 +8,7 @@ import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.service.autofill.CustomDescription;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -22,9 +23,12 @@ import android.widget.VideoView;
 import com.bytedance.camera.demo.bean.PostVideoResponse;
 import com.bytedance.camera.demo.network.VideoService;
 import com.bytedance.camera.demo.utils.ResourceUtils;
+import com.bytedance.camera.demo.utils.UriUtils;
 import com.bytedance.camera.demo.utils.Utils;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
@@ -54,6 +58,8 @@ public class PostVideo extends AppCompatActivity {
     private File imgFile;
     private File videoFile;
 
+    private boolean choose = true;//判断是本机视频还是录制视频
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -71,7 +77,7 @@ public class PostVideo extends AppCompatActivity {
                 if (getString(R.string.record).equals(record.getText())) {
                     Intent intent = new Intent(PostVideo.this, CustomCameraActivity.class);
                     startActivityForResult(intent, RECORD);
-                    record.setText("POST IT");
+
                 } else {
                     //record.setEnabled(true);
                     try {
@@ -95,12 +101,8 @@ public class PostVideo extends AppCompatActivity {
                 String s = mBtn.getText().toString();
                 if (getString(R.string.select_an_image).equals(s)) {
                     chooseImage();
-                    /*Todo:设置img*/
-
                 } else if (getString(R.string.select_a_video).equals(s)) {
                     chooseVideo();
-                    /*Todo:设置video*/
-
                 } else if (getString(R.string.post_it).equals(s)) {
                     try {
                         postVideo(1);
@@ -180,25 +182,30 @@ public class PostVideo extends AppCompatActivity {
                 video.setVideoURI(mSelectedVideo);
                 video.start();
             } else if (requestCode == RECORD) {
-                recordVideo = Uri.parse(data.getStringExtra("data"));
+                recordVideo = Uri.parse(data.getStringExtra("data1"));
+                mSelectedImage = Uri.parse(data.getStringExtra("data2"));
                 video.setVisibility(View.VISIBLE);
                 video.setVideoURI(recordVideo);
                 video.start();
-                MediaMetadataRetriever rev = new MediaMetadataRetriever();
-                rev.setDataSource(this,recordVideo);
-                Bitmap bitmap = rev.getFrameAtTime(0);
+
                 img.setVisibility(View.VISIBLE);
-                img.setImageBitmap(bitmap);
-                File file = Utils.getOutputMediaFile(Utils.MEDIA_TYPE_IMAGE);
+                img.setImageURI(mSelectedImage);
+
                 mSelectedVideo = recordVideo;
                 //mSelectedImage =
+                record.setText("POST IT");
             }
         }
     }
 
     private MultipartBody.Part getMultipartFromUri(String name, Uri uri) {
         // if NullPointerException thrown, try to allow storage permission in system settings
-        File f = new File(ResourceUtils.getRealPath(PostVideo.this, uri));
+        File f = null;
+        if (choose) {
+            f = new File(ResourceUtils.getRealPath(PostVideo.this, uri));
+        } else {
+            f = new File(Utils.convertUriToPath(PostVideo.this, uri));
+        }
         RequestBody requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), f);
         return MultipartBody.Part.createFormData(name, f.getName(), requestFile);
     }
@@ -207,9 +214,11 @@ public class PostVideo extends AppCompatActivity {
         if (i == 1) {
             mBtn.setText("POSTING...");
             mBtn.setEnabled(false);
+            choose = true;
         } else {
             record.setText("POSTING...");
             record.setEnabled(false);
+            choose = false;
         }
 
         ActivityCompat.requestPermissions(PostVideo.this,
