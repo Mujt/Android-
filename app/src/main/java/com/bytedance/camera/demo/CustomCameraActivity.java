@@ -140,6 +140,11 @@ public class CustomCameraActivity extends AppCompatActivity {
                 public void run() {
                     releaseMediaRecorder();
                     isRecording = false;
+                    Intent intent = new Intent();
+                    intent.putExtra("data1",outpath);
+                    intent.putExtra("data2",cover_img);
+                    setResult(RESULT_OK,intent);
+                    finish();
                 }
             }, 15 * 1000);
         });
